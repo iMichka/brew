@@ -50,8 +50,7 @@ module Homebrew
              depends_on:  "--autosquash",
              description: "Message to include when autosquashing revision bumps, deletions, and rebuilds."
       flag   "--workflow=",
-             description: "Retrieve artifacts from the specified workflow (default: `tests.yml`). "\
-                          "Legacy: use --workflows instead"
+             description: "Retrieve artifacts from the specified workflow (default: `tests.yml`)."
       flag   "--artifact=",
              description: "Download artifacts with the specified name (default: `bottles`)."
       flag   "--bintray-org=",
@@ -63,11 +62,6 @@ module Homebrew
       flag   "--bintray-mirror=",
              description: "Use the specified Bintray repository to automatically mirror stable URLs "\
                           "defined in the formulae (default: `mirror`)."
-      comma_array "--workflows=",
-                  description: "Retrieve artifacts from the specified workflow (default: `tests.yml`) "\
-                               "Comma-separated list to include multiple workflows."
-      comma_array "--ignore-missing-artifacts=",
-                  description: "Comma-separated list of workflows which can be ignored if they have not been run."
 
       conflicts "--clean", "--autosquash"
       min_named 1
@@ -363,13 +357,7 @@ module Homebrew
   def pr_pull
     args = pr_pull_args.parse
 
-    odeprecated "`brew pr-pull --workflow`", "`brew pr-pull --workflows=`" if args.workflow.presence
-
-    workflows = if args.workflow.blank?
-      args.workflows.presence || ["tests.yml"]
-    else
-      [args.workflow].compact.presence || ["tests.yml"]
-    end
+    workflow = args.workflow || "tests.yml"
     artifact = args.artifact || "bottles"
     bintray_org = args.bintray_org || "homebrew"
     mirror_repo = args.bintray_mirror || "mirror"
@@ -413,22 +401,8 @@ module Homebrew
             next
           end
 
-          workflows.each do |workflow|
-            workflow_run = GitHub.get_workflow_run(
-              user, repo, pr, workflow_id: workflow, artifact_name: artifact
-            )
-            if args.ignore_missing_artifacts.present? &&
-               args.ignore_missing_artifacts.include?(workflow) &&
-               workflow_run.empty?
-              # Ignore that workflow as it was not executed and we specified
-              # that we could skip it.
-              next
-            end
-
-            ohai "Downloading bottles for workflow: #{workflow}"
-            url = GitHub.get_artifact_url(workflow_run)
-            download_artifact(url, dir, pr)
-          end
+          url = GitHub.get_artifact_url(user, repo, pr, workflow_id: workflow, artifact_name: artifact)
+          download_artifact(url, dir, pr)
 
           next if args.no_upload?
 
