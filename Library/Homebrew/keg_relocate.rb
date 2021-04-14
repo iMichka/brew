@@ -62,6 +62,9 @@ class Keg
       new_repository: HOMEBREW_REPOSITORY.to_s,
       new_library:    HOMEBREW_LIBRARY.to_s,
     )
+
+    return if files[0] == "INSTALL_RECEIPT.json"
+
     relocate_dynamic_linkage(relocation) unless skip_linkage
     replace_text_in_files(relocation, files: files)
   end
